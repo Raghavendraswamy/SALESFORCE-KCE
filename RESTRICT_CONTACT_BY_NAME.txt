@@ -1,0 +1,45 @@
+@isTest
+public class TestRestrictContactByName {
+  @isTest
+    static void testValidContactInsert() {
+        // Create a contact with a valid last name
+        Contact c = new Contact(FirstName = 'John', LastName = 'Doe');
+        Test.startTest();
+        insert c;
+        Test.stopTest();
+
+        // Verify it was inserted successfully
+        Contact inserted = [SELECT Id, LastName FROM Contact WHERE Id = :c.Id];
+        System.assertEquals('Doe', inserted.LastName);
+    }
+
+    @isTest
+    static void testInvalidContactInsert() {
+        // Create a contact with the restricted last name
+        Contact c = new Contact(FirstName = 'Jane', LastName = 'INVALIDNAME');
+
+        Test.startTest();
+        try {
+            insert c;
+            System.assert(false, 'Expected an exception due to restricted last name');
+        } catch (DmlException e) {
+            System.assert(e.getMessage().contains('not allowed'), 'Expected error message to contain "not allowed"');
+        }
+        Test.stopTest();
+    }
+  
+    
+    
+    }
+-------------------------------------------------------------
+-------------------------------------------------------------
+
+trigger RestrictContactByName on Contact (before insert, before update) {
+  //check contacts prior to insert or update for invalid data
+  for(Contact c : Trigger.New) {
+    if(c.LastName == 'INVALIDNAME') {
+      //invalidname is invalid
+      c.AddError('The Last Name "'+c.LastName+'" is not allowed for DML');
+    }
+  }
+}
